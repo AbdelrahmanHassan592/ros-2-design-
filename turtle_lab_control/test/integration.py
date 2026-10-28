@@ -17,10 +17,12 @@ from turtle_lab_interfaces.srv import SetSpeedLimits
 rclpy.init()
 node = Node('lab_integration_test')
 pose = None
+pose_time = 0.0
 commands = []
 def on_pose(value):
-    global pose
+    global pose, pose_time
     pose = value
+    pose_time = time.monotonic()
 node.create_subscription(Pose, '/turtle1/pose', on_pose, 10)
 node.create_subscription(Twist, '/turtle1/cmd_vel', lambda value: commands.append(value), 100)
 def spin(seconds=0.1):
@@ -46,7 +48,11 @@ def limits(linear, angular):
                 SetSpeedLimits.Request(max_linear_speed=linear, max_angular_speed=angular))
 def reset():
     assert call('/reset_turtle', Trigger, Trigger.Request()).success
-    spin()
+    returned = time.monotonic()
+    deadline = returned + 5.0
+    while pose is None or pose_time <= returned:
+        assert time.monotonic() < deadline, 'No fresh pose after reset'
+        spin(0.05)
     assert abs(pose.x-5.544445)<0.001 and abs(pose.y-5.544445)<0.001
     assert abs(pose.theta)<0.001
 
