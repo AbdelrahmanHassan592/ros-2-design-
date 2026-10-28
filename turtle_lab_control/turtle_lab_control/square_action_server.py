@@ -14,6 +14,8 @@ from .common import START, SERVICE_TIMEOUT, bounded, pause, run
 
 class SquareActionServer(Node):
     """Reset, then send exactly four sequential corner goals."""
+    CHILD_TIMEOUT = 310.0
+
     def __init__(self) -> None:
         super().__init__('square_action_server')
         self.group = ReentrantCallbackGroup()
@@ -46,6 +48,8 @@ class SquareActionServer(Node):
         try:
             deadline = time.monotonic() + SERVICE_TIMEOUT
             while not (self.reset_client.service_is_ready() and self.pose_client.server_is_ready()):
+                if self.stopping:
+                    raise RuntimeError('Square server shutting down')
                 if handle.is_cancel_requested:
                     handle.canceled()
                     result.message = 'Square canceled before reset'
@@ -61,6 +65,8 @@ class SquareActionServer(Node):
                        (START + side, START + side, math.pi),
                        (START, START + side, -math.pi / 2), (START, START, 0.0)]
             for number, (x, y, yaw) in enumerate(corners, 1):
+                if self.stopping:
+                    raise RuntimeError('Square server shutting down')
                 if handle.is_cancel_requested:
                     handle.canceled()
                     result.message = 'Square canceled'
@@ -79,13 +85,20 @@ class SquareActionServer(Node):
                     raise RuntimeError(f'Side {number} pose goal rejected')
                 pending = child.get_result_async()
                 cancel_sent = False
+                deadline = time.monotonic() + self.CHILD_TIMEOUT
                 while not pending.done():
+                    if self.stopping:
+                        raise RuntimeError('Square server shutting down')
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(f'Side {number} result timed out')
                     if handle.is_cancel_requested and not cancel_sent:
                         await bounded(self, child.cancel_goal_async())
                         cancel_sent = True
                     await pause(self)
                 outcome = pending.result()
                 child = None
+                if self.stopping:
+                    raise RuntimeError('Square server shutting down')
                 if handle.is_cancel_requested:
                     handle.canceled()
                     result.message = 'Square canceled; active pose goal stopped'
@@ -98,7 +111,10 @@ class SquareActionServer(Node):
             result.message = 'Four sides completed'
         except Exception as error:
             if child is not None and child.accepted:
-                await bounded(self, child.cancel_goal_async())
+                try:
+                    await bounded(self, child.cancel_goal_async())
+                except Exception as cancel_error:
+                    self.get_logger().error(f'Child cancellation failed: {cancel_error}')
             result.message = str(error)
             self.get_logger().error(result.message)
             if handle.is_active:

@@ -89,6 +89,10 @@ class GoToPoseServer(Node):
         started = time.monotonic()
         try:
             while True:
+                if self.stopping:
+                    handle.abort()
+                    result.message = 'Pose server shutting down'
+                    break
                 if handle.is_cancel_requested:
                     handle.canceled()
                     result.message = 'Pose goal canceled'
