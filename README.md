@@ -1,6 +1,6 @@
 # Lab 1: ROS 2, Turtlesim, Actions & Services
 
-Team members: **Name1 - ID1, Name2 - ID2, Name3 - ID3** (replace with your details).
+Team members: **Abdelrahman Hassan Gaber - 2204044, Hamdy adel elmohamdy - 2204172, ahmed mohamed ahmed ali - 2204297**
 
 This repository belongs at `~/turtle_ws/src`. The workspace's `build`, `install`, and
 `log` directories live one level above the repository. No bags are committed.
@@ -302,21 +302,9 @@ The temporary bag is at `/tmp/turtle-lab-square-bag`, outside Git.
 **Limits of verification:** the square and blank canvas after reset were visually
 inspected, but individual transient teleport frames were not captured. Pen-off
 ordering was verified by the reset protocol tests. Replay is approximate rather
-than bit-for-bit deterministic. GitHub push was not performed. Team placeholders
-require your actual names and IDs. GUI screenshots are available at
+than bit-for-bit deterministic. GUI screenshots are available at
 `/tmp/lab-square.png` and `/tmp/lab-reset.png`; they are outside Git.
 
 Shutdown testing caught a teardown race during active actions. Nodes now handle
 signals in the main loop, stop goals and drain callbacks before destroying ROS
 entities. Idle shutdown and shutdown during pose/square motion were exercised.
-
-## GitHub
-
-Local commits are already created. Replace the URL and push when ready:
-
-```bash
-cd ~/turtle_ws/src
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
-git push -u origin main
-```
