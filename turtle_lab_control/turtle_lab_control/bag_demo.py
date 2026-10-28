@@ -1,5 +1,6 @@
 """Record a square or replay velocity commands with only turtlesim running."""
 import argparse
+import os
 from pathlib import Path
 import signal
 import subprocess
@@ -34,15 +35,16 @@ def main() -> None:
                 recorder.send_signal(signal.SIGINT)
             recorder.wait(timeout=15)
     else:
-        simulator = subprocess.Popen(['ros2', 'run', 'turtlesim', 'turtlesim_node'])
+        simulator = subprocess.Popen(['ros2', 'run', 'turtlesim', 'turtlesim_node'],
+                                     start_new_session=True)
         try:
             time.sleep(3.0)
-            cli('service', 'call', '/turtle1/set_pen', 'turtlesim/srv/SetPen', '{off: 1}')
+            cli('service', 'call', '/turtle1/set_pen', 'turtlesim/srv/SetPen', '{"off": 1}')
             cli('service', 'call', '/turtle1/teleport_absolute',
                 'turtlesim/srv/TeleportAbsolute', '{x: 5.544445, y: 5.544445, theta: 0.0}')
             cli('service', 'call', '/clear', 'std_srvs/srv/Empty', '{}')
             cli('service', 'call', '/turtle1/set_pen', 'turtlesim/srv/SetPen',
-                '{r: 179, g: 184, b: 255, width: 3, off: 0}')
+                '{r: 179, g: 184, b: 255, width: 3, "off": 0}')
             cli('bag', 'play', str(args.bag), '--topics', '/turtle1/cmd_vel')
             print('Replay finished. Inspect the canvas; press Ctrl+C to close turtlesim.', flush=True)
             simulator.wait()
@@ -50,5 +52,5 @@ def main() -> None:
             pass
         finally:
             if simulator.poll() is None:
-                simulator.send_signal(signal.SIGINT)
+                os.killpg(simulator.pid, signal.SIGINT)
             simulator.wait(timeout=15)
